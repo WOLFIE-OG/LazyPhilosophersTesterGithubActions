@@ -58,13 +58,8 @@ die_test () {
 	do
 		read -r -u 3 result	# read desired result description from input.txt
 		printf "\nTest: ${BLUEBG}${WHITE}[$input]${RESET} | ${PURP}$result${RESET}\n\n"	
-		read -rs -n 1 -p $'Press ENTER to start test, press any other key to exit tester...\n' key  # read from stdin, accepting only 1 char
-		if [[ $key == "" ]] ; then
-			printf "\n"
-			$1 $input	# run ./philo with test case input
-		else
-			exit 0
-		fi
+		printf "\n"
+		$1 $input
 	done 3< ./yes-die.txt   # open file is assigned fd 3
 	exec 3<&-	# close fd 3
 }
@@ -73,37 +68,29 @@ no_die_test () {
 	printf "\n${CYAN}=== Starting tests where a philosopher should NOT die ===\n${RESET}"
 	read -r -p $'\nPlease enter desired timer for tests or press ENTER to use default 10 seconds: ' timeout
 	printf "\n"
-	if [[ $timeout != *[[:digit:]]* ]]; then
-		timeout=10
-	fi
+	timeout=40
 	while IFS="" read -r -u 3 input || [ -n "$input" ] # read input from fd 3
 	do
 		read -r -u 3 result    # read desired result description from input.txt
 		printf "\nTest: ${BLUEBG}${WHITE}[$input]${RESET} | ${PURP}$result${RESET}\n\n"
-		read -rs -n 1 -p $'Press ENTER to start test, press any other key to exit tester...\n' key   # read from stdin, accepting only 1 char
-		if [[ $key == "" ]] ; then
-			printf "\n"
-			./PhilosophersChecker.py "$1 $input" $timeout > /dev/null & pid=$!   # silence checker output and run in bg
-			local elapsed=0
-			while ps -p $pid &>/dev/null; do    # check if checker script still running
-				draw_progress_bar $elapsed $timeout "seconds" # TODO: fix extra space at end of progress bar, extra )
-				if [[ $elapsed == $timeout ]]; then
-					printf "\n\n${GREEN}OK${RESET}\n"
-					(( PASS++ ))
-					break;
-				fi
-				(( elapsed++ ))
-				sleep 1
-			done
-			wait $pid
-			status=$?
-			if [[ $status != 0 ]]; then
-				printf "\n\n${RED}KO${RESET} - program terminated prematurely\n"
-				(( FAIL++ ))
+		printf "\n"
+		./PhilosophersChecker.py "$1 $input" $timeout > /dev/null & pid=$!   # silence checker output and run in bg
+		local elapsed=0
+		while ps -p $pid &>/dev/null; do    # check if checker script still running
+			draw_progress_bar $elapsed $timeout "seconds" # TODO: fix extra space at end of progress bar, extra )
+			if [[ $elapsed == $timeout ]]; then
+				printf "\n\n${GREEN}OK${RESET}\n"
+				(( PASS++ ))
+				break;
 			fi
-		else
-			printf "\n${GREEN}PASSED${RESET}: $PASS/$TESTS | ${RED}FAILED${RESET}: $FAIL/$TESTS\n"
-			exit 0
+			(( elapsed++ ))
+			sleep 1
+		done
+		wait $pid
+		status=$?
+		if [[ $status != 0 ]]; then
+			printf "\n\n${RED}KO${RESET} - program terminated prematurely\n"
+			(( FAIL++ ))
 		fi
 		(( TESTS++ ))
 	done 3< ./no-die.txt   # open file is assigned fd 3
@@ -112,33 +99,9 @@ no_die_test () {
 }
 
 choose_test () {
-	read -r -n 1 -p $'\nChoose test to run:\n\t[0] all tests\n\t[1] die tests\n\t[2] no-die tests (can take a while)\n\t[ESC] exit tester\n\n' choice
 	printf "\n"
-	case $choice in
-		0)
-			die_test "$1"
-			no_die_test "$1"
-			;;
-		1)
-			die_test "$1"
-			;;
-		2)
-			no_die_test "$1"
-			;;
-		$'\e')	# ESC key
-			exit 0
-			;;
-		*)
-			printf "${RED}Invalid choice\n${RESET}"
-			choose_test	"$1" # reprompt
-			;;
+	die_test "$1"
+	no_die_test "$1"
 	esac
 }
-
-printf "${BOLD}\n💭 The Lazy Philosophers Tester 💭\n${RESET}"
-printf "\nThis tester allows you to test:\n\n"
-printf "\t1. when your program should stop on death or when all philos have eaten enough\n"
-printf "\t- to be checked manually by the user, based on the expected result listed in yes-die.txt.\n\n"
-printf "\t2. when no philosophers should die\n"
-printf "\t- this is checked automatically if the program runs for x seconds (default 10) without death.\n"
 choose_test "$1"
