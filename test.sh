@@ -16,20 +16,6 @@ PASS=0
 FAIL=0
 TESTS=0
 
-# checks params. If none given, assumes philo executable is in same directory as tester directory.
-if [ "$#" -gt 1 ]; then
-	printf "Too many parameters. Please only provide path to philo executable.\n"
-	exit
-elif [ "$#"  -lt 1 ]; then
-	set $1 ../philo
-fi
-
-# checks if given executable path and file is valid.
-if [ ! -f "$1" ]; then
-	printf "$1 not found or invalid file. Please (re)make philo executable first.\n"
-	exit
-fi
-
 PROGRESS_BAR_WIDTH=50  # progress bar length in characters
 
 draw_progress_bar() {
@@ -66,7 +52,6 @@ die_test () {
 
 no_die_test () {
 	printf "\n${CYAN}=== Starting tests where a philosopher should NOT die ===\n${RESET}"
-	read -r -p $'\nPlease enter desired timer for tests or press ENTER to use default 10 seconds: ' timeout
 	printf "\n"
 	timeout=40
 	while IFS="" read -r -u 3 input || [ -n "$input" ] # read input from fd 3
@@ -102,6 +87,13 @@ choose_test () {
 	printf "\n"
 	die_test "$1"
 	no_die_test "$1"
-	esac
 }
+
+printf "${BOLD}\n💭 The Lazy Philosophers Tester for github actions💭\n${RESET}"
+printf "\nTests:\n\n"
+printf "\t1. when your program should stop on death or when all philos have eaten enough\n"
+printf "\t- to be checked manually by the user, based on the expected result listed in yes-die.txt.\n\n"
+printf "\t2. when no philosophers should die\n"
+printf "\t- this is checked automatically if the program runs for x seconds (default 40) without death.\n"
+
 choose_test "$1"
